@@ -195,5 +195,72 @@ ylabel('Trunk Z')
  
 %% Signal Processing - Noise Removal
 
+% Parameters extract from data table
+t = dataTable(:,55);
+n = size(t);
+f = 1/t;
+% Compute FFT of the time domain Trunk data
+FFTx = fft(trunkCentreX);
+FFTy = fft(trunkCentreY);
+FFTz = fft(trunkCentreZ);
+% Compute two-sided amplitude spectrum of signal
+P2x = abs(FFTx/n);
+P1x = P2x(1:n/2+1)
+P1x(2:end-1) = 2*P1x(2:end-1);
+P2y = abs(FFTy/n);
+P1y = P2y(1:n/2+1)
+P1y(2:end-1) = 2*P1y(2:end-1);
+P2z = abs(FFTz/n);
+P1z = P2z(1:n/2+1)
+P1z(2:end-1) = 2*P1z(2:end-1);
+% Plot single-sided amplitude spectrum of signal
+subplot(1,3,1)
+plot(f,P1x) 
+title('Single-Sided Amplitude Spectrum of X Trunk Centre')
+xlabel('f (Hz)')
+ylabel('|P1x(f)|')
+subplot(1,3,2)
+plot(f,P1y) 
+title('Single-Sided Amplitude Spectrum of Y Trunk Centre')
+xlabel('f (Hz)')
+ylabel('|P1y(f)|')
+subplot(1,3,3)
+plot(f,P1z) 
+title('Single-Sided Amplitude Spectrum of Z Trunk Centre')
+xlabel('f (Hz)')
+ylabel('|P1z(f)|')
+% Identify noise frequency range - apply band pass filter
+a = fir1(40,2*[1 200]/f); 
+b = fir1(48,2*[1 200]/f); 
+c = fir1(60,2*[1 200]/f); 
+newTCx = filter(a,1,trunkCentreX);
+newTCy = filter(b,1,trunkCentreY);
+newTCz = filter(c,1,trunkCentreZ);
+% Plot filtered signal against original
+subplot(1,3,1)
+hold on
+plot(t,trunkCentreX)
+plot(t,newTCx)
+hold off
+title('X Trunk Centre')
+xlabel('t (s)')
+ylabel('Displacement')
+subplot(1,3,2)
+hold on
+plot(t,trunkCentreY)
+plot(t,newTCy)
+hold off
+title('Y Trunk Centre')
+xlabel('t (s)')
+ylabel('Displacement')
+subplot(1,3,3)
+hold on
+plot(t,trunkCentreZ)
+plot(t,newTCz)
+hold off
+title('Z Trunk Centre')
+xlabel('t (s)')
+ylabel('Displacement')
+
 %% Signal Processing - Area Under Curve
 
