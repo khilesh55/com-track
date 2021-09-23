@@ -104,7 +104,7 @@ trunkCentreY = mean([leftShoulderY, rightShoulderY, leftHipY, rightHipY], 2);
 trunkCentreZ = mean([leftShoulderZ, rightShoulderZ, leftHipZ, rightHipZ], 2);
 
 %Generate row vector for plotting
-pointNumVec = linspace(1,dataPoints-1,dataPoints-1);
+pointNumVec = linspace(1,dataPoints,dataPoints);
       
 %Plot figs
 figure(1);
