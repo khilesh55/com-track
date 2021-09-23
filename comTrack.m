@@ -262,5 +262,17 @@ title('Z Trunk Centre')
 xlabel('t (s)')
 ylabel('Displacement')
 
-%% Signal Processing - Area Under Curve
+%% Signal Processing - Output Parameter: Area Under the Curve
+% Established Baseline
+% Assign index begin and end
+% Area under the curve (trapz)
+% Assign Off-balance limits
+% Boolean trigger for whether or not user is off balance
 
+%% Signal Processing - Output Parameter: Peaks Identification
+% Findpeaks point
+findpeaks(trunkCentreX);
+findpeaks(trunkCentreY);
+findpeaks(trunkCentreZ);
+% Plot Peaks as function of time
+% Area under the curve (trapz)
