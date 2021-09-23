@@ -193,5 +193,7 @@ ylabel('Trunk Z')
 
 %Uncertainty radius for COM (from Martin + Emily)
  
-%Signal processing
+%% Signal Processing - Noise Removal
+
+%% Signal Processing - Area Under Curve
 
