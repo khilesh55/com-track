@@ -85,75 +85,23 @@ end
 shoeSizeCM
 
 %Extract data columns into vector arrays
-leftShoulderX = table2array(dataTable(2:end, 16));
-leftShoulderY = table2array(dataTable(2:end, 17));
-leftShoulderZ = table2array(dataTable(2:end, 18));
-rightShoulderX = table2array(dataTable(2:end, 19));
-rightShoulderY = table2array(dataTable(2:end, 20));
-rightShoulderZ = table2array(dataTable(2:end, 21));
-leftHipX = table2array(dataTable(2:end, 34));
-leftHipY = table2array(dataTable(2:end, 35));
-leftHipZ = table2array(dataTable(2:end, 36));
-rightHipX = table2array(dataTable(2:end, 37));
-rightHipY = table2array(dataTable(2:end, 38));
-rightHipZ = table2array(dataTable(2:end, 39));
+leftShoulderX = dataTable.ShoulderLeftX;
+leftShoulderY = dataTable.ShoulderLeftY;
+leftShoulderZ = dataTable.ShoulderLeftZ;
+rightShoulderX = dataTable.ShoulderRightX;
+rightShoulderY = dataTable.ShoulderRightY;
+rightShoulderZ = dataTable.ShoulderRightZ;
+leftHipX = dataTable.HipLeftX;
+leftHipY = dataTable.HipLeftY;
+leftHipZ = dataTable.HipLeftZ;
+rightHipX = dataTable.HipRightX;
+rightHipY = dataTable.HipRightY;
+rightHipZ = dataTable.HipRightZ;
+timeStamp = dataTable.Timestamp;
 
-%Turn this into a matrix
-dataArray = [leftShoulderX leftShoulderY leftShoulderZ...
-    rightShoulderX rightShoulderY rightShoulderZ...
-    leftHipX leftHipY leftHipZ...
-    rightHipX rightHipY rightHipZ];
-
-%Initialize loop vars
-i=1; 
-val1=0;
-val2=0;
-val3=0;
-
-%Iterate through the matrix to smooth outliers 
-for j=1:12
-    for i=2:(dataPoints-2)
-        val1 = dataArray((i-1),j);
-        val2 = dataArray(i,j);
-        val3 = dataArray((i+1),j);
-        
-        if ((abs((val2-val1)/val2)>1) && (abs((val2-val3)/val2)>1))
-            val2 = (val1+val3)/2;
-            dataArray(i,j) = val2;
-        end
-    end
-end
-
-%Extract data columns into vector arrays
-leftShoulderX = dataArray(:,1);
-leftShoulderY = dataArray(:,2);
-leftShoulderZ = dataArray(:,3);
-rightShoulderX = dataArray(:,4);
-rightShoulderY = dataArray(:,5);
-rightShoulderZ = dataArray(:,6);
-leftHipX = dataArray(:,7);
-leftHipY = dataArray(:,8);
-leftHipZ = dataArray(:,9);
-rightHipX = dataArray(:,10);
-rightHipY = dataArray(:,11);
-rightHipZ = dataArray(:,12);
-
-%Get trunk coords X and Y
-trunkCentreY = (leftShoulderY-rightShoulderY)/2;
-trunkCentreX = ((leftShoulderX-leftHipX)+(rightShoulderX-rightHipX))/4;
-
-%For a reference to initial stand trunk height
-refNum = 30;
-hRef = (leftShoulderX(1:refNum)-leftHipX(1:refNum))+...
-    (rightShoulderX(1:refNum)-rightHipX(1:refNum))/2;
-tRef = mean(trunkCentreX(1:refNum));
-
-%Estimate lean angle
-alpha = acos((((rightShoulderX-rightHipX)+...
-    (leftShoulderX-leftHipX))/2)/hRef);
-
-%Get trunk coord Z
-trunkCentreZ = ((rightHipY+leftHipY)/2)+tRef*sin(alpha);
+trunkCentreX = mean([leftShoulderX, rightShoulderX, leftHipX, rightHipX], 2);
+trunkCentreY = mean([leftShoulderY, rightShoulderY, leftHipY, rightHipY], 2);
+trunkCentreZ = mean([leftShoulderZ, rightShoulderZ, leftHipZ, rightHipZ], 2);
 
 %Generate row vector for plotting
 pointNumVec = linspace(1,dataPoints-1,dataPoints-1);
