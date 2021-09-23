@@ -99,12 +99,16 @@ rightHipY = dataTable.HipRightY;
 rightHipZ = dataTable.HipRightZ;
 timeStamp = dataTable.Timestamp;
 
+[yr, mth, day, hr, mn, s] = datevec(timeStamp);
+timeAbs = 3600*hr + 60*mn + s;
+time = timeAbs - timeAbs(1);
+
 trunkCentreX = mean([leftShoulderX, rightShoulderX, leftHipX, rightHipX], 2);
 trunkCentreY = mean([leftShoulderY, rightShoulderY, leftHipY, rightHipY], 2);
 trunkCentreZ = mean([leftShoulderZ, rightShoulderZ, leftHipZ, rightHipZ], 2);
 
 %Generate row vector for plotting
-pointNumVec = linspace(1,dataPoints-1,dataPoints-1);
+pointNumVec = linspace(1,dataPoints,dataPoints);
       
 %Plot figs
 figure(1);
@@ -144,8 +148,8 @@ ylabel('Trunk Z')
 %% Signal Processing - Noise Removal
 
 % Parameters extract from data table
-t = dataTable(:,55);
-n = size(t);
+t = time;
+n = size(t, 1);
 f = 1/t;
 % Compute FFT of the time domain Trunk data
 FFTx = fft(trunkCentreX);
