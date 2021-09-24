@@ -106,27 +106,24 @@ time = timeAbs - timeAbs(1);
 trunkCentreX = mean([leftShoulderX, rightShoulderX, leftHipX, rightHipX], 2);
 trunkCentreY = mean([leftShoulderY, rightShoulderY, leftHipY, rightHipY], 2);
 trunkCentreZ = mean([leftShoulderZ, rightShoulderZ, leftHipZ, rightHipZ], 2);
-
-%Generate row vector for plotting
-pointNumVec = linspace(1,dataPoints,dataPoints);
       
 %Plot figs
 figure(1);
 title('Trunk X')
-xlabel('Data Point')
-plot(pointNumVec, trunkCentreX);
+plot(time, trunkCentreX);
+xlabel('Time (s)')
 ylabel('Trunk X')
       
 figure(2);
 title('Trunk Y')
-xlabel('Data Point')
-plot(pointNumVec, trunkCentreY);
+plot(time, trunkCentreY);
+xlabel('Time (s)')
 ylabel('Trunk Y')
 
 figure(3);
 title('Trunk Z')
-xlabel('Data Point')
-plot(pointNumVec, trunkCentreZ);
+plot(time, trunkCentreZ);
+xlabel('Time (s)')
 ylabel('Trunk Z')
 
 %Start GitHub - Khilesh
