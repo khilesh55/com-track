@@ -107,109 +107,115 @@ trunkCentreX = mean([leftShoulderX, rightShoulderX, leftHipX, rightHipX], 2);
 trunkCentreY = mean([leftShoulderY, rightShoulderY, leftHipY, rightHipY], 2);
 trunkCentreZ = mean([leftShoulderZ, rightShoulderZ, leftHipZ, rightHipZ], 2);
       
-%Plot figs
-figure(1);
-title('Trunk X')
-plot(time, trunkCentreX);
-xlabel('Time (s)')
-ylabel('Trunk X')
-      
-figure(2);
-title('Trunk Y')
-plot(time, trunkCentreY);
-xlabel('Time (s)')
-ylabel('Trunk Y')
-
-figure(3);
-title('Trunk Z')
-plot(time, trunkCentreZ);
-xlabel('Time (s)')
-ylabel('Trunk Z')
-
-%Start GitHub - Khilesh
-
-%Alex - slot in the centroid code instead of my approach
-
-%Ella - look up distance from ankle center to back of heel
-
-%Alex - implement above to create bounding box & alert for if COM
-% goes outside of bounding box
-
-%James - extend lookup table to include foot size (extrapolation/ calcs
-% may be required
-
-%Check axes - Khilesh to verify (Kinetisense literature)
-
-%Uncertainty radius for COM (from Martin + Emily)
- 
 %% Signal Processing - Noise Removal
 
-% Parameters extract from data table
+% Remove spikes/outliers
+TCx = filloutliers(trunkCentreX,'clip','movmedian',5,'SamplePoints',time);
+TCy = filloutliers(trunkCentreY,'clip','movmedian',5,'SamplePoints',time);
+TCz = filloutliers(trunkCentreZ,'clip','movmedian',5,'SamplePoints',time);
+% Variable declaration
 t = time;
-n = size(t, 1);
-f = 1/t;
-% Compute FFT of the time domain Trunk data
-FFTx = fft(trunkCentreX);
-FFTy = fft(trunkCentreY);
-FFTz = fft(trunkCentreZ);
-% Compute two-sided amplitude spectrum of signal
-P2x = abs(FFTx/n);
-P1x = P2x(1:n/2+1)
-P1x(2:end-1) = 2*P1x(2:end-1);
-P2y = abs(FFTy/n);
-P1y = P2y(1:n/2+1)
-P1y(2:end-1) = 2*P1y(2:end-1);
-P2z = abs(FFTz/n);
-P1z = P2z(1:n/2+1)
-P1z(2:end-1) = 2*P1z(2:end-1);
-% Plot single-sided amplitude spectrum of signal
-subplot(1,3,1)
-plot(f,P1x) 
-title('Single-Sided Amplitude Spectrum of X Trunk Centre')
-xlabel('f (Hz)')
-ylabel('|P1x(f)|')
-subplot(1,3,2)
-plot(f,P1y) 
-title('Single-Sided Amplitude Spectrum of Y Trunk Centre')
-xlabel('f (Hz)')
-ylabel('|P1y(f)|')
-subplot(1,3,3)
-plot(f,P1z) 
-title('Single-Sided Amplitude Spectrum of Z Trunk Centre')
-xlabel('f (Hz)')
-ylabel('|P1z(f)|')
-% Identify noise frequency range - apply band pass filter
-a = fir1(40,2*[1 200]/f); 
-b = fir1(48,2*[1 200]/f); 
-c = fir1(60,2*[1 200]/f); 
-newTCx = filter(a,1,trunkCentreX);
-newTCy = filter(b,1,trunkCentreY);
-newTCz = filter(c,1,trunkCentreZ);
-% Plot filtered signal against original
-subplot(1,3,1)
-hold on
-plot(t,trunkCentreX)
-plot(t,newTCx)
-hold off
-title('X Trunk Centre')
-xlabel('t (s)')
-ylabel('Displacement')
-subplot(1,3,2)
-hold on
-plot(t,trunkCentreY)
-plot(t,newTCy)
-hold off
-title('Y Trunk Centre')
-xlabel('t (s)')
-ylabel('Displacement')
-subplot(1,3,3)
-hold on
-plot(t,trunkCentreZ)
-plot(t,newTCz)
-hold off
-title('Z Trunk Centre')
-xlabel('t (s)')
-ylabel('Displacement')
+n = length(t);
+Fs = 1/(mean(diff(time)));
+Fn = Fs/2;
+f = Fs/n*(1:n);
+x_mag = abs(fft(TCx));
+y_mag = abs(fft(TCy));
+z_mag = abs(fft(TCz));
+% Low pass filter design
+[b a] = butter(1, 0.3, 'low');
+x_filtered = filter(b,a,TCx);
+[d c] = butter(1, 0.3, 'low');
+y_filtered = filter(d,c,TCy);
+[v e] = butter(1, 0.3, 'low');
+z_filtered = filter(v,e,TCz);
+% Offset signal to new baseline
+new_x = x_filtered-mean(x_filtered);
+new_y = y_filtered+mean(y_filtered)-0.03;
+new_z = z_filtered-mean(z_filtered)+0.1;
+% Display original and filtered signal in frequency domain
+figure(1)
+subplot(3,3,1)
+xf_mag = abs(fft(x_filtered));
+plot(f,abs(x_mag),f,abs(xf_mag))
+title('x Response - Frequency Domain')
+xlabel('Frequency(Hz)') 
+ylabel('x Magnitude(dB)') 
+legend({'Original','Filtered'},'Location','northeast')
+subplot(3,3,4)
+yf_mag = abs(fft(y_filtered));
+plot(f,abs(y_mag),f,abs(yf_mag))
+title('y Response - Frequency Domain')
+xlabel('Frequency(Hz)') 
+ylabel('y Magnitude(dB)') 
+legend({'Original','Filtered'},'Location','northeast')
+subplot(3,3,7)
+zf_mag = abs(fft(z_filtered));
+plot(f,abs(z_mag),f,abs(zf_mag))
+title('z Response - Frequency Domain')
+xlabel('Frequency(Hz)') 
+ylabel('z Magnitude(dB)') 
+legend({'Original','Filtered'},'Location','northeast')
+% Display original and filtered signal in time domain
+subplot(3,3,2)
+plot(t,trunkCentreX,t,new_x)
+title('x Response - Time Domain')
+xlabel('Time(s)') 
+ylabel('x Position(m)') 
+legend({'Original','Filtered'},'Location','southeast')
+subplot(3,3,5)
+plot(t,trunkCentreY,t,new_y)
+title('y Response - Time Domain')
+xlabel('Time(s)') 
+ylabel('y Position(m)') 
+legend({'Original','Filtered'},'Location','southeast')
+subplot(3,3,8)
+plot(t,trunkCentreZ,t,new_z)
+title('z Response - Time Domain')
+xlabel('Time(s)') 
+ylabel('z Position(m)') 
+legend({'Original','Filtered'},'Location','southeast')
+
+%% Signal Processing - Output Parameters
+
+% Area under curve
+area_x = trapz(t,new_x)
+area_y = trapz(t,new_y)
+area_z = trapz(t,new_z)
+% Plot area under curve
+subplot(3,3,3)
+area(t,new_x)
+ylim([-0.05 0.05]);
+title('Area Under Curve - xt Response')
+xlabel('Time(s)') 
+ylabel('x Position(m)') 
+subplot(3,3,6)
+area(t,new_y)
+ylim([-0.2 0.6]);
+title('Area Under Curve - yt Response')
+xlabel('Time(s)') 
+ylabel('y Position(m)') 
+subplot(3,3,9)
+area(t,new_z)
+ylim([-1 1]);
+title('Area Under Curve - zt Response')
+xlabel('Time(s)') 
+ylabel('z Position(m)') 
+% Calculate rms
+rms_x = rms(new_x)
+rms_y = rms(new_y)
+rms_z = rms(new_z)
+% Calculate Gradient
+gradient_x = gradient(new_x);
+gradient_y = gradient(new_y);
+gradient_z = gradient(new_z);
+figure(2)
+subplot(3,1,1)
+plot(t,gradient_x)
+subplot(3,1,2)
+plot(t,gradient_y)
+subplot(3,1,3)
+plot(t,gradient_z)
 
 %% Signal Processing - Output Parameter: Area Under the Curve
 % Established Baseline
@@ -218,10 +224,3 @@ ylabel('Displacement')
 % Assign Off-balance limits
 % Boolean trigger for whether or not user is off balance
 
-%% Signal Processing - Output Parameter: Peaks Identification
-% Findpeaks point
-findpeaks(trunkCentreX);
-findpeaks(trunkCentreY);
-findpeaks(trunkCentreZ);
-% Plot Peaks as function of time
-% Area under the curve (trapz)
