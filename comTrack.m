@@ -84,6 +84,44 @@ end
 
 shoeSizeCM
 
+prompt = "Please enter centre of mass offset from trunk centre: ";
+offsetInput = char(inputdlg(prompt));
+offsetDouble = str2double(offsetInput);
+
+if ~isnan(offsetDouble)
+    valid = 1;
+else
+    valid = 0;
+end
+
+while (valid == 0)
+    prompt = "That is not a valid value for mass offset. Please try again: ";
+    offsetInput = char(inputdlg(prompt));
+    offsetDouble = str2double(offsetInput);
+    if ~isnan(offsetDouble)
+        valid = 1;
+    else
+        valid = 0;
+    end
+end
+
+%Dropdown menu for user to choose unit convention
+conventions = {'cm','mm','in'};
+[idx,tf] = listdlg('PromptString',{'Please select unit convention.'},...
+    'ListString',conventions,'SelectionMode','single');
+
+%Depending on chosen convention and provided shoe size, calculate
+%offset in m
+switch idx
+    case 1
+        offsetVal = offsetDouble / 100;
+    case 2
+        offsetVal = offsetDouble / 1000;
+    case 3
+        offsetVal = offsetDouble * 25.4 / 1000;
+end
+
+
 %Extract data columns into vector arrays
 leftShoulderX = dataTable.ShoulderLeftX;
 leftShoulderY = dataTable.ShoulderLeftY;
@@ -97,7 +135,19 @@ leftHipZ = dataTable.HipLeftZ;
 rightHipX = dataTable.HipRightX;
 rightHipY = dataTable.HipRightY;
 rightHipZ = dataTable.HipRightZ;
+leftAnkleX = dataTable.AnkleLeftX;
+leftAnkleY = dataTable.AnkleLeftY;
+leftAnkleZ = dataTable.AnkleLeftZ;
+rightAnkleX = dataTable.AnkleRightX;
+rightAnkleY = dataTable.AnkleRightY;
+rightAnkleZ = dataTable.AnkleRightZ;
 timeStamp = dataTable.Timestamp;
+
+%
+headX = dataTable.HeadX;
+headY = dataTable.HeadY;
+headZ = dataTable.HeadZ;
+%
 
 [yr, mth, day, hr, mn, s] = datevec(timeStamp);
 timeAbs = 3600*hr + 60*mn + s;
@@ -106,35 +156,129 @@ time = timeAbs - timeAbs(1);
 trunkCentreX = mean([leftShoulderX, rightShoulderX, leftHipX, rightHipX], 2);
 trunkCentreY = mean([leftShoulderY, rightShoulderY, leftHipY, rightHipY], 2);
 trunkCentreZ = mean([leftShoulderZ, rightShoulderZ, leftHipZ, rightHipZ], 2);
+
+midShoulderX = (leftShoulderX + rightShoulderX)/2;
+midShoulderY = (leftShoulderY + rightShoulderY)/2;
+midShoulderZ = (leftShoulderZ + rightShoulderZ)/2;
+midHipX = (leftHipX + rightHipX)/2;
+midHipY = (leftHipY + rightHipY)/2;
+midHipZ = (leftHipZ + rightHipZ)/2;
+
+midAnkleX = (leftAnkleX + rightAnkleX)/2;
+midAnkleY = (leftAnkleY + rightAnkleY)/2;
+midAnkleZ = (leftAnkleZ + rightAnkleZ)/2;
+
+crossVector = [midShoulderX - midHipX, midShoulderY - midHipY, midShoulderZ - midHipZ];
+crossVectorMag = vecnorm(crossVector, 2, 2);
+crossUnitVector = crossVector ./ crossVectorMag;
+
+comOffsetVector = crossUnitVector * offsetVal;
+
+comX = trunkCentreX + comOffsetVector(:, 1);
+comY = trunkCentreY + comOffsetVector(:, 2);
+comZ = trunkCentreZ + comOffsetVector(:, 3);
+
+paramDX = comZ - midAnkleZ;
+paramHX = comY - midAnkleY;
+
+%Plot figs
+figure(1);
+title('Centre of Mass X')
+plot(time, comX);
+xlabel('Time (s)')
+ylabel('Centre of Mass X')
       
+figure(2);
+title('Centre of Mass Y')
+plot(time, comY);
+xlabel('Time (s)')
+ylabel('Centre of Mass Y')
+
+figure(3);
+title('Centre of Mass Z')
+plot(time, comZ);
+xlabel('Time (s)')
+ylabel('Centre of Mass Z')
+
+figure(7);
+plot(time, paramDX);
+xlabel('Time (s)')
+ylabel('Parameter D')
+
+figure(8);
+plot(time, paramHX);
+xlabel('Time (s)')
+ylabel('Parameter H')
+
+fullArrayX = [leftShoulderX; rightShoulderX; leftHipX; rightHipX; leftAnkleX; rightAnkleX; headX; comX];
+fullArrayY = [leftShoulderY; rightShoulderY; leftHipY; rightHipY; leftAnkleY; rightAnkleY; headY; comY];
+fullArrayZ = [leftShoulderZ; rightShoulderZ; leftHipZ; rightHipZ; leftAnkleZ; rightAnkleZ; headY; comZ];
+
+for i = 1:length(time)/5
+    figure(4);
+    plot3(leftShoulderX(i), leftShoulderZ(i), leftShoulderY(i), 'bx', ...
+        rightShoulderX(i), rightShoulderZ(i), rightShoulderY(i), 'bx', ...
+        leftHipX(i), leftHipZ(i), leftHipY(i), 'bx', ...
+        rightHipX(i), rightHipZ(i), rightHipY(i), 'bx', ...
+        trunkCentreX(i), trunkCentreZ(i), trunkCentreY(i), 'go', ...
+        midShoulderX(i), midShoulderZ(i), midShoulderY(i), 'rx', ...
+        midHipX(i), midHipZ(i), midHipY(i), 'rx', ...
+        comX(i), comZ(i), comY(i), 'ro', ...
+        leftAnkleX(i), leftAnkleZ(i), leftAnkleY(i), 'bx', ...
+        rightAnkleX(i), rightAnkleZ(i), rightAnkleY(i), 'bx', ...
+        headX(i), headZ(i), headY(i), 'bo', 'MarkerSize', 10);
+    xlabel('x');
+    ylabel('z');
+    zlabel('y');
+    xlim([min(fullArrayX), max(fullArrayX)]);
+    ylim([min(fullArrayZ), max(fullArrayZ)]);
+    zlim([min(fullArrayY), max(fullArrayY)]);
+end
+
+%Start GitHub - Khilesh
+
+%Alex - slot in the centroid code instead of my approach
+
+%Ella - look up distance from ankle center to back of heel
+
+%Alex - implement above to create bounding box & alert for if COM
+% goes outside of bounding box
+
+%James - extend lookup table to include foot size (extrapolation/ calcs
+% may be required
+
+%Check axes - Khilesh to verify (Kinetisense literature)
+
+%Uncertainty radius for COM (from Martin + Emily)
+ 
 %% Signal Processing - Noise Removal
 
 % Remove spikes/outliers
-TCx = filloutliers(trunkCentreX,'clip','movmedian',5,'SamplePoints',time);
-TCy = filloutliers(trunkCentreY,'clip','movmedian',5,'SamplePoints',time);
-TCz = filloutliers(trunkCentreZ,'clip','movmedian',5,'SamplePoints',time);
+CMx = filloutliers(comX,'clip','movmedian',5,'SamplePoints',time);
+CMy = filloutliers(comY,'clip','movmedian',5,'SamplePoints',time);
+CMz = filloutliers(comZ,'clip','movmedian',5,'SamplePoints',time);
 % Variable declaration
 t = time;
 n = length(t);
 Fs = 1/(mean(diff(time)));
 Fn = Fs/2;
 f = Fs/n*(1:n);
-x_mag = abs(fft(TCx));
-y_mag = abs(fft(TCy));
-z_mag = abs(fft(TCz));
+x_mag = abs(fft(CMx));
+y_mag = abs(fft(CMy));
+z_mag = abs(fft(CMz));
 % Low pass filter design
 [b a] = butter(1, 0.3, 'low');
-x_filtered = filter(b,a,TCx);
+x_filtered = filter(b,a,CMx);
 [d c] = butter(1, 0.3, 'low');
-y_filtered = filter(d,c,TCy);
+y_filtered = filter(d,c,CMy);
 [v e] = butter(1, 0.3, 'low');
-z_filtered = filter(v,e,TCz);
+z_filtered = filter(v,e,CMz);
 % Offset signal to new baseline
 new_x = x_filtered-mean(x_filtered);
-new_y = y_filtered+mean(y_filtered)-0.03;
+new_y = y_filtered+mean(y_filtered)-0.1-offsetVal;
 new_z = z_filtered-mean(z_filtered)+0.1;
 % Display original and filtered signal in frequency domain
-figure(1)
+figure(5)
 subplot(3,3,1)
 xf_mag = abs(fft(x_filtered));
 plot(f,abs(x_mag),f,abs(xf_mag))
@@ -158,19 +302,19 @@ ylabel('z Magnitude(dB)')
 legend({'Original','Filtered'},'Location','northeast')
 % Display original and filtered signal in time domain
 subplot(3,3,2)
-plot(t,trunkCentreX,t,new_x)
+plot(t,comX,t,new_x)
 title('x Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('x Position(m)') 
 legend({'Original','Filtered'},'Location','southeast')
 subplot(3,3,5)
-plot(t,trunkCentreY,t,new_y)
+plot(t,comY,t,new_y)
 title('y Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('y Position(m)') 
 legend({'Original','Filtered'},'Location','southeast')
 subplot(3,3,8)
-plot(t,trunkCentreZ,t,new_z)
+plot(t,comZ,t,new_z)
 title('z Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('z Position(m)') 
@@ -209,7 +353,7 @@ rms_z = rms(new_z)
 gradient_x = gradient(new_x);
 gradient_y = gradient(new_y);
 gradient_z = gradient(new_z);
-figure(2)
+figure(6)
 subplot(3,1,1)
 plot(t,gradient_x)
 subplot(3,1,2)
@@ -223,4 +367,3 @@ plot(t,gradient_z)
 % Area under the curve (trapz)
 % Assign Off-balance limits
 % Boolean trigger for whether or not user is off balance
-
