@@ -235,135 +235,131 @@ for i = 1:length(time)/5
     zlim([min(fullArrayY), max(fullArrayY)]);
 end
 
-%Start GitHub - Khilesh
-
-%Alex - slot in the centroid code instead of my approach
-
-%Ella - look up distance from ankle center to back of heel
-
-%Alex - implement above to create bounding box & alert for if COM
-% goes outside of bounding box
-
-%James - extend lookup table to include foot size (extrapolation/ calcs
-% may be required
-
-%Check axes - Khilesh to verify (Kinetisense literature)
-
-%Uncertainty radius for COM (from Martin + Emily)
- 
 %% Signal Processing - Noise Removal
 
 % Remove spikes/outliers
-CMx = filloutliers(comX,'clip','movmedian',5,'SamplePoints',time);
-CMy = filloutliers(comY,'clip','movmedian',5,'SamplePoints',time);
-CMz = filloutliers(comZ,'clip','movmedian',5,'SamplePoints',time);
+D = filloutliers(paramDX,'clip','movmedian',8,'SamplePoints',time);
+H = filloutliers(paramHX,'clip','movmedian',6,'SamplePoints',time);
+
 % Variable declaration
 t = time;
 n = length(t);
 Fs = 1/(mean(diff(time)));
 Fn = Fs/2;
-f = Fs/n*(1:n);
-x_mag = abs(fft(CMx));
-y_mag = abs(fft(CMy));
-z_mag = abs(fft(CMz));
+
+% Fourier Transform
+f = linspace(0,1,fix(n/2)+1)*Fn;
+i = 1:length(f);
+fftD = fft(paramDX)/n;
+fftH = fft(paramHX)/n;
+D_mag = abs(fftD(i))*2;
+H_mag = abs(fftH(i))*2;
+
 % Low pass filter design
-[b a] = butter(1, 0.3, 'low');
-x_filtered = filter(b,a,CMx);
-[d c] = butter(1, 0.3, 'low');
-y_filtered = filter(d,c,CMy);
-[v e] = butter(1, 0.3, 'low');
-z_filtered = filter(v,e,CMz);
+[D1 D2] = butter(3, 0.9, 'low');
+[H1 H2] = butter(1, 0.5, 'low');
+
+% Filter implementation
+D_filtered = filter(D1,D2,D);
+H_filtered = filter(H1,H2,H);
+
+% Convert Filtered signal to Frequency domain
+fftDf = fft(D_filtered)/n;
+Df_mag = abs(fftDf(i))*2;
+fftHf = fft(H_filtered)/n;
+Hf_mag = abs(fftHf(i))*2;
+
+% Calaculate baseline
+LM_D = islocalmin(D_filtered,'MinSeparation',2,'SamplePoints',t);
+LM_H = islocalmin(H_filtered,'MinSeparation',10,'SamplePoints',t);
+base_D = median(D_filtered(LM_D));
+base_H = median(H_filtered(LM_H));
+
 % Offset signal to new baseline
-new_x = x_filtered-mean(x_filtered);
-new_y = y_filtered+mean(y_filtered)-0.1-offsetVal;
-new_z = z_filtered-mean(z_filtered)+0.1;
-% Display original and filtered signal in frequency domain
-figure(5)
-subplot(3,3,1)
-xf_mag = abs(fft(x_filtered));
-plot(f,abs(x_mag),f,abs(xf_mag))
-title('x Response - Frequency Domain')
-xlabel('Frequency(Hz)') 
-ylabel('x Magnitude(dB)') 
-legend({'Original','Filtered'},'Location','northeast')
-subplot(3,3,4)
-yf_mag = abs(fft(y_filtered));
-plot(f,abs(y_mag),f,abs(yf_mag))
-title('y Response - Frequency Domain')
-xlabel('Frequency(Hz)') 
-ylabel('y Magnitude(dB)') 
-legend({'Original','Filtered'},'Location','northeast')
-subplot(3,3,7)
-zf_mag = abs(fft(z_filtered));
-plot(f,abs(z_mag),f,abs(zf_mag))
-title('z Response - Frequency Domain')
-xlabel('Frequency(Hz)') 
-ylabel('z Magnitude(dB)') 
-legend({'Original','Filtered'},'Location','northeast')
-% Display original and filtered signal in time domain
-subplot(3,3,2)
-plot(t,comX,t,new_x)
-title('x Response - Time Domain')
-xlabel('Time(s)') 
-ylabel('x Position(m)') 
-legend({'Original','Filtered'},'Location','southeast')
-subplot(3,3,5)
-plot(t,comY,t,new_y)
-title('y Response - Time Domain')
-xlabel('Time(s)') 
-ylabel('y Position(m)') 
-legend({'Original','Filtered'},'Location','southeast')
-subplot(3,3,8)
-plot(t,comZ,t,new_z)
-title('z Response - Time Domain')
-xlabel('Time(s)') 
-ylabel('z Position(m)') 
-legend({'Original','Filtered'},'Location','southeast')
+new_D = D_filtered-base_D;
+new_H = H_filtered-base_H;
+
+% Calculate Gradient Response
+gradient_D = gradient(new_D);
+gradient_H = gradient(new_H);
+
 
 %% Signal Processing - Output Parameters
 
-% Area under curve
-area_x = trapz(t,new_x)
-area_y = trapz(t,new_y)
-area_z = trapz(t,new_z)
-% Plot area under curve
-subplot(3,3,3)
-area(t,new_x)
-ylim([-0.05 0.05]);
-title('Area Under Curve - xt Response')
-xlabel('Time(s)') 
-ylabel('x Position(m)') 
-subplot(3,3,6)
-area(t,new_y)
-ylim([-0.2 0.6]);
-title('Area Under Curve - yt Response')
-xlabel('Time(s)') 
-ylabel('y Position(m)') 
-subplot(3,3,9)
-area(t,new_z)
-ylim([-1 1]);
-title('Area Under Curve - zt Response')
-xlabel('Time(s)') 
-ylabel('z Position(m)') 
-% Calculate rms
-rms_x = rms(new_x)
-rms_y = rms(new_y)
-rms_z = rms(new_z)
-% Calculate Gradient
-gradient_x = gradient(new_x);
-gradient_y = gradient(new_y);
-gradient_z = gradient(new_z);
-figure(6)
-subplot(3,1,1)
-plot(t,gradient_x)
-subplot(3,1,2)
-plot(t,gradient_y)
-subplot(3,1,3)
-plot(t,gradient_z)
+% Standing rms
 
-%% Signal Processing - Output Parameter: Area Under the Curve
-% Established Baseline
-% Assign index begin and end
-% Area under the curve (trapz)
-% Assign Off-balance limits
-% Boolean trigger for whether or not user is off balance
+% An estimate of the gradient for rise speed
+RS_index = islocalmax(gradient_H,'MinSeparation',10,'SamplePoints',t);
+RS = gradient_H(RS_index);
+t_RS = t(RS_index);
+% An estimate of the gradient for to sit speed
+SS_index = islocalmin(gradient_H,'MinSeparation',10,'SamplePoints',t);
+SS = gradient_H(SS_index);
+t_SS = t(SS_index);
+
+% An estimate of the lean speed(Gradient of +D)
+LS = gradient_D(RS_index);
+t_LS = t(RS_index);
+% An estimate of the gradient for lean back speed
+LBS = gradient_D(SS_index);
+t_LBS = t(SS_index);
+
+% The distance D of the COM during the transition from sitting to standing
+sit2standD = max(new_D,[RS_index(1) SS_index(1)])-min(new_D,[3 RS_index(1)]);
+% The distance D of the COM during the transition from standing to sitting
+stand2sitD = max(new_D,[RS_index(1) SS_index(1)])-min(new_D,[SS_index(1) RS_index(2)]);
+% The height H of the COM during the transition from sitting to standing
+sit2standH = max(new_H,[RS_index(1) SS_index(1)])-min(new_H,[3 RS_index(1)]);
+% The height H of the COM during the transition from standing to sitting
+stand2sitD = max(new_H,[RS_index(1) SS_index(1)])-min(new_H,[SS_index(1) RS_index(2)]);
+% The average sit to stand sequence duration (time per sit to stand cycle/ number of cycles)
+index = islocalmax(gradient_H,'MinSeparation',6,'SamplePoints',t);
+Ts = mean(diff(t(index)));
+%% Plot Results
+
+% Display original and filtered signal in time domain
+figure(1)
+subplot(2,1,1)
+plot(t,paramDX,t,new_D,t_LS,new_D(RS_index),'*r',t_LBS,new_D(SS_index),'ob')
+title('D Response - Time Domain')
+xlabel('Time(s)') 
+ylabel('D Position(m)') 
+legend({'Original','Filtered'},'Location','southeast')
+subplot(2,1,2)
+plot(t,paramHX,t,new_H,t_RS,new_H(RS_index),'*r',t_SS,new_H(SS_index),'ob')
+title('H Response - Time Domain')
+xlabel('Time(s)') 
+ylabel('H Position(m)') 
+legend({'Original','Filtered'},'Location','southeast')
+
+% Display original and filtered signal in frequency domain
+figure(2)
+subplot(2,1,1)
+plot(f,D_mag,f,Df_mag)
+title('D Response - Single Sided Frequency')
+xlabel('Frequency(Hz)') 
+ylabel('D Magnitude(dB)') 
+legend({'Original','Filtered'},'Location','northeast')
+subplot(2,1,2)
+plot(f,H_mag,f,Hf_mag)
+title('H Response - Single Sided Frequency')
+xlabel('Frequency(Hz)') 
+ylabel('H Magnitude(dB)') 
+legend({'Original','Filtered'},'Location','northeast')
+
+% Plot Gradient Response in time domain
+figure(3)
+subplot(2,1,1)
+plot(t,gradient_D,t_LS,LS,'*r',t_LBS,LBS,'ob')
+ylim([-1 1]);
+xlabel('Time(s)') 
+ylabel('Gradient D(m/s)') 
+subplot(2,1,2)
+plot(t,gradient_H,t_RS,RS,'*r',t_SS,SS,'ob')
+ylim([-0.1 0.1]);
+xlabel('Time(s)') 
+ylabel('Gradient H(m/s)') 
+
+%% Export Outputs
+ 
+
