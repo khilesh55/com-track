@@ -11,9 +11,10 @@ clearvars
 source_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Data'; 
 output_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Output';
 source_files = dir(fullfile(source_dir, '*.xlsx'));
+fileIdx = 1; % Select which file to open
 
 %Read data into table from Excel
-dataTable = readtable(fullfile(source_dir, source_files(1).name));
+dataTable = readtable(fullfile(source_dir, source_files(fileIdx).name));
 
 %Table size has 2 numbers: # of rows and # of columns
 %We only want the # rows, so 
@@ -214,13 +215,13 @@ fullArrayX = [leftShoulderX; rightShoulderX; leftHipX; rightHipX; leftAnkleX; ri
 fullArrayY = [leftShoulderY; rightShoulderY; leftHipY; rightHipY; leftAnkleY; rightAnkleY; headY; comY];
 fullArrayZ = [leftShoulderZ; rightShoulderZ; leftHipZ; rightHipZ; leftAnkleZ; rightAnkleZ; headY; comZ];
 
-for i = 1:length(time)/5
-    figure(4);
+for i = 1:length(time)
+    animplot = figure(4);
     plot3(leftShoulderX(i), leftShoulderZ(i), leftShoulderY(i), 'bx', ...
         rightShoulderX(i), rightShoulderZ(i), rightShoulderY(i), 'bx', ...
         leftHipX(i), leftHipZ(i), leftHipY(i), 'bx', ...
         rightHipX(i), rightHipZ(i), rightHipY(i), 'bx', ...
-        trunkCentreX(i), trunkCentreZ(i), trunkCentreY(i), 'go', ...
+        trunkCentreX(i), trunkCentreZ(i), trunkCentreY(i), 'gx', ...
         midShoulderX(i), midShoulderZ(i), midShoulderY(i), 'rx', ...
         midHipX(i), midHipZ(i), midHipY(i), 'rx', ...
         comX(i), comZ(i), comY(i), 'ro', ...
@@ -233,6 +234,18 @@ for i = 1:length(time)/5
     xlim([min(fullArrayX), max(fullArrayX)]);
     ylim([min(fullArrayZ), max(fullArrayZ)]);
     zlim([min(fullArrayY), max(fullArrayY)]);
+    title(strcat({'Frame: '}, string(i)));
+    %Change plot view
+    view(-90, 0); % Front view (0, 0); Side View (90, 0) or (-90, 0); Comment out line for isometric
+    %GIF writer
+    gifFile = string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_animplot3.gif'}));
+    im = frame2im(getframe(animplot));
+    [A,map] = rgb2ind(im, 256);
+    if i == 1
+        imwrite(A,map,gifFile,'gif','LoopCount',Inf,'Delay',1/60);
+    else
+        imwrite(A,map,gifFile,'gif','WriteMode','append','Delay',1/60);
+    end
 end
 
 %% Signal Processing - Noise Removal
