@@ -324,7 +324,7 @@ stand2sitD = max(new_D,[RS_index(1) SS_index(1)])-min(new_D,[SS_index(1) RS_inde
 % The height H of the COM during the transition from sitting to standing
 sit2standH = max(new_H,[RS_index(1) SS_index(1)])-min(new_H,[3 RS_index(1)]);
 % The height H of the COM during the transition from standing to sitting
-stand2sitD = max(new_H,[RS_index(1) SS_index(1)])-min(new_H,[SS_index(1) RS_index(2)]);
+stand2sitH = max(new_H,[RS_index(1) SS_index(1)])-min(new_H,[SS_index(1) RS_index(2)]);
 % The average sit to stand sequence duration (time per sit to stand cycle/ number of cycles)
 index = islocalmax(gradient_H,'MinSeparation',6,'SamplePoints',t);
 Ts = mean(diff(t(index)));
@@ -374,5 +374,20 @@ xlabel('Time(s)')
 ylabel('Gradient H(m/s)') 
 
 %% Export Outputs
- 
 
+% Create a vector table and write filtered D, H and gradients
+vectable = table(new_D, sit2standD(:, 1), stand2sitD(:, 1), new_H, sit2standH(:, 1), stand2sitH(:, 1), gradient_D, gradient_H, time);
+vectable.Properties.VariableNames = {'magnitudeD', 'sit2standD', 'stand2sitD', 'magnitudeH', 'sit2standH', 'stand2sitH', 'gradientD', 'gradientH', 'relativeTime'};
+
+% Create table for each sit-to-stand parameter and write values and times
+rs_table = table(RS, LS, t_RS);
+rs_table.Properties.VariableNames = {'riseSpeed', 'riseLeanSpeed', 'relativeTime'};
+ss_table = table(SS, LBS, t_SS);
+ss_table.Properties.VariableNames = {'dropSpeed', 'dropLeanSpeed', 'relativeTime'};
+Ts_table = table(Ts);
+Ts_table.Properties.VariableNames = {'sit2standPeriod'};
+
+writetable(vectable, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_VectorOutput.csv'})));
+writetable(rs_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_RiseOutput.csv'})));
+writetable(ss_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_DropOutput.csv'})));
+writetable(Ts_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_MotionPeriodOutput.csv'})));
