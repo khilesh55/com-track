@@ -251,7 +251,7 @@ end
 %% Signal Processing - Noise Removal
 
 % Remove spikes/outliers
-D = filloutliers(paramDX,'clip','movmedian',8,'SamplePoints',time);
+D = filloutliers(paramDX,'clip','movmedian',6.5,'SamplePoints',time);
 H = filloutliers(paramHX,'clip','movmedian',6,'SamplePoints',time);
 
 % Variable declaration
@@ -269,12 +269,14 @@ D_mag = abs(fftD(i))*2;
 H_mag = abs(fftH(i))*2;
 
 % Low pass filter design
-[D1 D2] = butter(3, 0.9, 'low');
-[H1 H2] = butter(1, 0.5, 'low');
+wn_D = 0.5; % Cutoff frequency for D
+wn_H = 0.5; %Cutoff frequency for H
+[D1 D2] = butter(1, wn_D, 'low'); %Low pass filter for D with 1st order
+[H1 H2] = butter(1, wn_H, 'low'); %Low pass filter for H with 1st order
 
 % Filter implementation
-D_filtered = filter(D1,D2,D);
-H_filtered = filter(H1,H2,H);
+D_filtered = filter(D1,D2,D); % Apply filter to orginal signal D
+H_filtered = filter(H1,H2,H); % Apply filter to orginal signal H
 
 % Convert Filtered signal to Frequency domain
 fftDf = fft(D_filtered)/n;
@@ -299,23 +301,23 @@ gradient_H = gradient(new_H);
 
 %% Signal Processing - Output Parameters
 
-% Standing rms
-
-% An estimate of the gradient for rise speed
-RS_index = islocalmax(gradient_H,'MinSeparation',10,'SamplePoints',t);
+% An estimate of the rise speed (Gradient of -H)
+RS_index = islocalmax(gradient_H,'MinSeparation',6,'SamplePoints',t);
 RS = gradient_H(RS_index);
 t_RS = t(RS_index);
-% An estimate of the gradient for to sit speed
-SS_index = islocalmin(gradient_H,'MinSeparation',10,'SamplePoints',t);
+% An estimate of the sit speed (Gradient of -H)
+SS_index = islocalmin(gradient_H,'MinSeparation',6,'SamplePoints',t);
 SS = gradient_H(SS_index);
 t_SS = t(SS_index);
 
-% An estimate of the lean speed(Gradient of +D)
-LS = gradient_D(RS_index);
-t_LS = t(RS_index);
-% An estimate of the gradient for lean back speed
-LBS = gradient_D(SS_index);
-t_LBS = t(SS_index);
+% An estimate of the lean speeds(Gradient of +D)
+LS_index = islocalmax(gradient_D,'MinSeparation',6,'SamplePoints',t);
+LS = gradient_D(LS_index);
+t_LS = t(LS_index);
+% An estimate of the lean back speeds (Gradient of -D)
+LBS_index = islocalmin(gradient_D,'MinSeparation',6,'SamplePoints',t);
+LBS = gradient_D(LBS_index);
+t_LBS = t(LBS_index);
 
 % The distance D of the COM during the transition from sitting to standing
 sit2standD = max(new_D,[RS_index(1) SS_index(1)])-min(new_D,[3 RS_index(1)]);
@@ -327,19 +329,23 @@ sit2standH = max(new_H,[RS_index(1) SS_index(1)])-min(new_H,[3 RS_index(1)]);
 stand2sitH = max(new_H,[RS_index(1) SS_index(1)])-min(new_H,[SS_index(1) RS_index(2)]);
 % The average sit to stand sequence duration (time per sit to stand cycle/ number of cycles)
 index = islocalmax(gradient_H,'MinSeparation',6,'SamplePoints',t);
-Ts = mean(diff(t(index)));
+Ts = diff(t(index));
+
+
 %% Plot Results
 
 % Display original and filtered signal in time domain
 figure(1)
 subplot(2,1,1)
-plot(t,paramDX,t,new_D,t_LS,new_D(RS_index),'*r',t_LBS,new_D(SS_index),'ob')
+plot(t,paramDX,t,new_D,t_LS,new_D(LS_index),'*r',t_LBS,new_D(LBS_index),'ob')
+ylim([-1 1]);
 title('D Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('D Position(m)') 
 legend({'Original','Filtered'},'Location','southeast')
 subplot(2,1,2)
 plot(t,paramHX,t,new_H,t_RS,new_H(RS_index),'*r',t_SS,new_H(SS_index),'ob')
+ylim([-1 1]);
 title('H Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('H Position(m)') 
@@ -364,7 +370,7 @@ legend({'Original','Filtered'},'Location','northeast')
 figure(3)
 subplot(2,1,1)
 plot(t,gradient_D,t_LS,LS,'*r',t_LBS,LBS,'ob')
-ylim([-1 1]);
+ylim([-0.1 0.1]);
 xlabel('Time(s)') 
 ylabel('Gradient D(m/s)') 
 subplot(2,1,2)
@@ -391,3 +397,5 @@ writetable(vectable, string(strcat(output_dir, {'\'}, source_files(fileIdx).name
 writetable(rs_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_RiseOutput.csv'})));
 writetable(ss_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_DropOutput.csv'})));
 writetable(Ts_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_MotionPeriodOutput.csv'})));
+=======
+
