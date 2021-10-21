@@ -11,9 +11,10 @@ clearvars
 source_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Data'; 
 output_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Output';
 source_files = dir(fullfile(source_dir, '*.xlsx'));
+fileIdx = 1; % Select which file to open
 
 %Read data into table from Excel
-dataTable = readtable(fullfile(source_dir, source_files(1).name));
+dataTable = readtable(fullfile(source_dir, source_files(fileIdx).name));
 
 %Table size has 2 numbers: # of rows and # of columns
 %We only want the # rows, so 
@@ -181,7 +182,73 @@ comZ = trunkCentreZ + comOffsetVector(:, 3);
 paramDX = comZ - midAnkleZ;
 paramHX = comY - midAnkleY;
 
-% Signal Processing - Noise Removal
+%Plot figs
+figure(1);
+title('Centre of Mass X')
+plot(time, comX);
+xlabel('Time (s)')
+ylabel('Centre of Mass X')
+      
+figure(2);
+title('Centre of Mass Y')
+plot(time, comY);
+xlabel('Time (s)')
+ylabel('Centre of Mass Y')
+
+figure(3);
+title('Centre of Mass Z')
+plot(time, comZ);
+xlabel('Time (s)')
+ylabel('Centre of Mass Z')
+
+figure(7);
+plot(time, paramDX);
+xlabel('Time (s)')
+ylabel('Parameter D')
+
+figure(8);
+plot(time, paramHX);
+xlabel('Time (s)')
+ylabel('Parameter H')
+
+fullArrayX = [leftShoulderX; rightShoulderX; leftHipX; rightHipX; leftAnkleX; rightAnkleX; headX; comX];
+fullArrayY = [leftShoulderY; rightShoulderY; leftHipY; rightHipY; leftAnkleY; rightAnkleY; headY; comY];
+fullArrayZ = [leftShoulderZ; rightShoulderZ; leftHipZ; rightHipZ; leftAnkleZ; rightAnkleZ; headY; comZ];
+
+for i = 1:length(time)
+    animplot = figure(4);
+    plot3(leftShoulderX(i), leftShoulderZ(i), leftShoulderY(i), 'bx', ...
+        rightShoulderX(i), rightShoulderZ(i), rightShoulderY(i), 'bx', ...
+        leftHipX(i), leftHipZ(i), leftHipY(i), 'bx', ...
+        rightHipX(i), rightHipZ(i), rightHipY(i), 'bx', ...
+        trunkCentreX(i), trunkCentreZ(i), trunkCentreY(i), 'gx', ...
+        midShoulderX(i), midShoulderZ(i), midShoulderY(i), 'rx', ...
+        midHipX(i), midHipZ(i), midHipY(i), 'rx', ...
+        comX(i), comZ(i), comY(i), 'ro', ...
+        leftAnkleX(i), leftAnkleZ(i), leftAnkleY(i), 'bx', ...
+        rightAnkleX(i), rightAnkleZ(i), rightAnkleY(i), 'bx', ...
+        headX(i), headZ(i), headY(i), 'bo', 'MarkerSize', 10);
+    xlabel('x');
+    ylabel('z');
+    zlabel('y');
+    xlim([min(fullArrayX), max(fullArrayX)]);
+    ylim([min(fullArrayZ), max(fullArrayZ)]);
+    zlim([min(fullArrayY), max(fullArrayY)]);
+    title(strcat({'Frame: '}, string(i)));
+    %Change plot view
+    view(-90, 0); % Front view (0, 0); Side View (90, 0) or (-90, 0); Comment out line for isometric
+    %GIF writer
+    gifFile = string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_animplot3.gif'}));
+    im = frame2im(getframe(animplot));
+    [A,map] = rgb2ind(im, 256);
+    if i == 1
+        imwrite(A,map,gifFile,'gif','LoopCount',Inf,'Delay',1/60);
+    else
+        imwrite(A,map,gifFile,'gif','WriteMode','append','Delay',1/60);
+    end
+end
+
+%% Signal Processing - Noise Removal
 
 % Remove spikes/outliers
 D = filloutliers(paramDX,'clip','movmedian',6.5,'SamplePoints',time);
@@ -311,3 +378,24 @@ plot(t,gradient_H,t_RS,RS,'*r',t_SS,SS,'ob')
 ylim([-0.1 0.1]);
 xlabel('Time(s)') 
 ylabel('Gradient H(m/s)') 
+
+%% Export Outputs
+
+% Create a vector table and write filtered D, H and gradients
+vectable = table(new_D, sit2standD(:, 1), stand2sitD(:, 1), new_H, sit2standH(:, 1), stand2sitH(:, 1), gradient_D, gradient_H, time);
+vectable.Properties.VariableNames = {'magnitudeD', 'sit2standD', 'stand2sitD', 'magnitudeH', 'sit2standH', 'stand2sitH', 'gradientD', 'gradientH', 'relativeTime'};
+
+% Create table for each sit-to-stand parameter and write values and times
+rs_table = table(RS, LS, t_RS);
+rs_table.Properties.VariableNames = {'riseSpeed', 'riseLeanSpeed', 'relativeTime'};
+ss_table = table(SS, LBS, t_SS);
+ss_table.Properties.VariableNames = {'dropSpeed', 'dropLeanSpeed', 'relativeTime'};
+Ts_table = table(Ts);
+Ts_table.Properties.VariableNames = {'sit2standPeriod'};
+
+writetable(vectable, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_VectorOutput.csv'})));
+writetable(rs_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_RiseOutput.csv'})));
+writetable(ss_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_DropOutput.csv'})));
+writetable(Ts_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_MotionPeriodOutput.csv'})));
+=======
+
