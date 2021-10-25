@@ -8,10 +8,13 @@ clc
 clearvars
 
 %Source and output directory
-source_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Data'; 
-output_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Output';
+source_dir = 'C:\Users\adond\OneDrive - York University\Research\U of A MATLAB\Test Data'; 
+output_dir = 'C:\Users\adond\OneDrive - York University\Research\U of A MATLAB\Test Output';
 source_files = dir(fullfile(source_dir, '*.xlsx'));
 fileIdx = 1; % Select which file to open
+
+[~, dataSetName, ~] = fileparts(fullfile(source_dir, source_files(fileIdx).name));
+mkdir(string(strcat(output_dir, {'\'}, dataSetName)));
 
 %Read data into table from Excel
 dataTable = readtable(fullfile(source_dir, source_files(fileIdx).name));
@@ -146,7 +149,7 @@ for i = 1:length(time)
     %Change plot view
     view(-90, 0); % Front view (0, 0); Side View (90, 0) or (-90, 0); Comment out line for isometric
     %GIF writer
-    gifFile = string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_animplot3.gif'}));
+    gifFile = string(strcat(output_dir, {'\'}, dataSetName, {'\animplot3.gif'}));
     im = frame2im(getframe(animplot));
     [A,map] = rgb2ind(im, 256);
     if i == 1
@@ -318,15 +321,16 @@ ylabel('Gradient H(m/s)')
 
 %% Export Outputs
 
-[~, dataSetName, ~] = fileparts(fullfile(source_dir, source_files(fileIdx).name));
-outputWrite = string(strcat(output_dir, {'\'}, dataSetName, '_Results.xlsx'));
+outputWrite = string(strcat(output_dir, {'\'}, dataSetName, '\Results.xlsx'));
 
-xlsTitles = ["leanSpeed", "leanSpeedTimestamp", "leanBackSpeed", "leanBackSpeedTimestamp", ...
-    "riseSpeed", "riseSpeedTimestamp", "dropSpeed", "dropSpeedTimestamp", "leanDistance", ...
-    "leanBackDistance", "riseHeight", "dropHeight", "leanRMS", "leanBackRMS", "riseRMS", ...
-    "dropRMS", "cyclePeriod"];
+xlsTitles1 = ["leanSpeed", "leanSpeedTimestamp", "leanBackSpeed", "leanBackSpeedTimestamp", ...
+    "riseSpeed", "riseSpeedTimestamp", "dropSpeed", "dropSpeedTimestamp", "cyclePeriod"];
 
-xlswrite(outputWrite, xlsTitles, 1, 'A1');
+xlsTitles2 = ["leanDistance", "leanBackDistance", "riseHeight", "dropHeight", ...
+    "leanRMS", "leanBackRMS", "riseRMS", "dropRMS"];
+
+xlswrite(outputWrite, xlsTitles1, 1, 'A1');
+xlswrite(outputWrite, xlsTitles2, 2, 'A1');
 
 xlswrite(outputWrite, Lean_Speed, 1, 'A2');
 xlswrite(outputWrite, t_Lean_Speed, 1, 'B2');
@@ -336,17 +340,17 @@ xlswrite(outputWrite, Rise_Speed, 1, 'E2');
 xlswrite(outputWrite, t_Rise_Speed, 1, 'F2');
 xlswrite(outputWrite, Sit_Speed, 1, 'G2');
 xlswrite(outputWrite, t_Sit_Speed, 1, 'H2');
-xlswrite(outputWrite, P_delta_D, 1, 'I2');
-xlswrite(outputWrite, N_delta_D, 1, 'J2');
-xlswrite(outputWrite, P_delta_H, 1, 'K2');
-xlswrite(outputWrite, N_delta_H, 1, 'L2');
-xlswrite(outputWrite, Leaning_rms, 1, 'M2');
-xlswrite(outputWrite, Leaning_back_rms, 1, 'N2');
-xlswrite(outputWrite, Standing_rms, 1, 'O2');
-xlswrite(outputWrite, Sitting_rms, 1, 'P2');
-xlswrite(outputWrite, Ts, 1, 'Q2');
+xlswrite(outputWrite, Ts, 1, 'I2');
 
-saveas(h(1), string(strcat(output_dir, {'\'}, dataSetName, '_figure1.jpg')));
-saveas(h(2), string(strcat(output_dir, {'\'}, dataSetName, '_figure2.jpg')));
-saveas(h(3), string(strcat(output_dir, {'\'}, dataSetName, '_figure3.jpg')));
+xlswrite(outputWrite, P_delta_D, 2, 'A2');
+xlswrite(outputWrite, N_delta_D, 2, 'B2');
+xlswrite(outputWrite, P_delta_H, 2, 'C2');
+xlswrite(outputWrite, N_delta_H, 2, 'D2');
+xlswrite(outputWrite, Leaning_rms, 2, 'E2');
+xlswrite(outputWrite, Leaning_back_rms, 2, 'F2');
+xlswrite(outputWrite, Standing_rms, 2, 'G2');
+xlswrite(outputWrite, Sitting_rms, 2, 'H2');
 
+saveas(h(1), string(strcat(output_dir, {'\'}, dataSetName, '\figure1.jpg')));
+saveas(h(2), string(strcat(output_dir, {'\'}, dataSetName, '\figure2.jpg')));
+saveas(h(3), string(strcat(output_dir, {'\'}, dataSetName, '\figure3.jpg')));
