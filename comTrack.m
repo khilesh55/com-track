@@ -22,69 +22,6 @@ tableSize = size(dataTable);
 %size(dataArray) ========= [M, N] <---- tableSize
 dataPoints = tableSize(1);
 
-%The following matrix is has headings [US, Euro, UK, in, cm)
-%From https://www.candefashions.com/about/shoe-size-conversion-chart/
-shoeSizes = [6      39      5.5     9.25        23.5;
-             6.5	39      6       9.5         24.1;
-             7      40      6.5     9.625       24.4;
-             7.5	40.5	7       9.75        24.8;
-             8      41      7.5     9.9375      25.4;
-             8.5	41.5	8       10.125      25.7;
-             9      42      8.5     10.25       26;
-             9.5	42.5	9       10.4375     26.7;
-             10     43      9.5     10.5625     27;
-             10.5	43.5	10      10.75       27.3;
-             11     44      10.5	10.9375     27.9;
-             11.5	44.5	11      11.125      28.3;
-             12     45      11.5	11.25       28.6;
-             13     46      12.5	11.5625     29.4;
-             14     47      13.5	11.875      30.2;
-             15     48      14.5	12.1875     31 ];
-
-%Ask user for the patient's shoe size
-shoeSizeCM = 0;
-valid = 0;
-prompt = "Please enter participant's shoe size: ";
-shoeSizeInput = char(inputdlg(prompt));
-
-%Check if the given shoe size exists in the matrix
-if any(shoeSizes(:) == str2double(shoeSizeInput))
-    valid = 1;
-else valid = 0;
-end
-
-%If valid skip, if invalid ask again until valid
-while (valid == 0)
-    prompt = "That is not a valid shoe size. Please try again: ";
-    shoeSizeInput = char(inputdlg(prompt));
-    if any(shoeSizes(:) == str2double(shoeSizeInput))
-        valid = 1;
-    else valid = 0;
-    end
-end
-
-%Dropdown menu for user to choose sizing convention
-conventions = {'US','European','UK'};
-[idx,tf] = listdlg('PromptString',{'Please select size convention.'},...
-    'ListString',conventions,'SelectionMode','single');
-sizeIdx = 0;
-
-%Depending on chosen convention and provided shoe size, locate
-%shoe size in cm from the matrix
-switch idx
-    case 1
-        sizeIdx = find(shoeSizes(:,1) == str2double(shoeSizeInput));
-        shoeSizeCM = shoeSizes(sizeIdx, 5);
-    case 2
-        sizeIdx = find(shoeSizes(:,2) == str2double(shoeSizeInput));
-        shoeSizeCM = shoeSizes(sizeIdx, 5);
-    case 3
-        sizeIdx = find(shoeSizes(:,3) == str2double(shoeSizeInput));
-        shoeSizeCM = shoeSizes(sizeIdx, 5);
-end
-
-shoeSizeCM
-
 prompt = "Please enter centre of mass offset from trunk centre: ";
 offsetInput = char(inputdlg(prompt));
 offsetDouble = str2double(offsetInput);
@@ -181,35 +118,6 @@ comZ = trunkCentreZ + comOffsetVector(:, 3);
 
 paramDX = comZ - midAnkleZ;
 paramHX = comY - midAnkleY;
-
-%Plot figs
-figure(1);
-title('Centre of Mass X')
-plot(time, comX);
-xlabel('Time (s)')
-ylabel('Centre of Mass X')
-      
-figure(2);
-title('Centre of Mass Y')
-plot(time, comY);
-xlabel('Time (s)')
-ylabel('Centre of Mass Y')
-
-figure(3);
-title('Centre of Mass Z')
-plot(time, comZ);
-xlabel('Time (s)')
-ylabel('Centre of Mass Z')
-
-figure(7);
-plot(time, paramDX);
-xlabel('Time (s)')
-ylabel('Parameter D')
-
-figure(8);
-plot(time, paramHX);
-xlabel('Time (s)')
-ylabel('Parameter H')
 
 fullArrayX = [leftShoulderX; rightShoulderX; leftHipX; rightHipX; leftAnkleX; rightAnkleX; headX; comX];
 fullArrayY = [leftShoulderY; rightShoulderY; leftHipY; rightHipY; leftAnkleY; rightAnkleY; headY; comY];
@@ -410,21 +318,35 @@ ylabel('Gradient H(m/s)')
 
 %% Export Outputs
 
-% Create a vector table and write filtered D, H and gradients
-vectable = table(new_D, sit2standD(:, 1), stand2sitD(:, 1), new_H, sit2standH(:, 1), stand2sitH(:, 1), gradient_D, gradient_H, time);
-vectable.Properties.VariableNames = {'magnitudeD', 'sit2standD', 'stand2sitD', 'magnitudeH', 'sit2standH', 'stand2sitH', 'gradientD', 'gradientH', 'relativeTime'};
+[~, dataSetName, ~] = fileparts(fullfile(source_dir, source_files(fileIdx).name));
+outputWrite = string(strcat(output_dir, {'\'}, dataSetName, '_Results.xlsx'));
 
-% Create table for each sit-to-stand parameter and write values and times
-rs_table = table(RS, LS, t_RS);
-rs_table.Properties.VariableNames = {'riseSpeed', 'riseLeanSpeed', 'relativeTime'};
-ss_table = table(SS, LBS, t_SS);
-ss_table.Properties.VariableNames = {'dropSpeed', 'dropLeanSpeed', 'relativeTime'};
-Ts_table = table(Ts);
-Ts_table.Properties.VariableNames = {'sit2standPeriod'};
+xlsTitles = ["leanSpeed", "leanSpeedTimestamp", "leanBackSpeed", "leanBackSpeedTimestamp", ...
+    "riseSpeed", "riseSpeedTimestamp", "dropSpeed", "dropSpeedTimestamp", "leanDistance", ...
+    "leanBackDistance", "riseHeight", "dropHeight", "leanRMS", "leanBackRMS", "riseRMS", ...
+    "dropRMS", "cyclePeriod"];
 
-writetable(vectable, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_VectorOutput.csv'})));
-writetable(rs_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_RiseOutput.csv'})));
-writetable(ss_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_DropOutput.csv'})));
-writetable(Ts_table, string(strcat(output_dir, {'\'}, source_files(fileIdx).name, {'_MotionPeriodOutput.csv'})));
-=======
+xlswrite(outputWrite, xlsTitles, 1, 'A1');
+
+xlswrite(outputWrite, Lean_Speed, 1, 'A2');
+xlswrite(outputWrite, t_Lean_Speed, 1, 'B2');
+xlswrite(outputWrite, Lean_Back_Speed, 1, 'C2');
+xlswrite(outputWrite, t_Lean_Back_Speed, 1, 'D2');
+xlswrite(outputWrite, Rise_Speed, 1, 'E2');
+xlswrite(outputWrite, t_Rise_Speed, 1, 'F2');
+xlswrite(outputWrite, Sit_Speed, 1, 'G2');
+xlswrite(outputWrite, t_Sit_Speed, 1, 'H2');
+xlswrite(outputWrite, P_delta_D, 1, 'I2');
+xlswrite(outputWrite, N_delta_D, 1, 'J2');
+xlswrite(outputWrite, P_delta_H, 1, 'K2');
+xlswrite(outputWrite, N_delta_H, 1, 'L2');
+xlswrite(outputWrite, Leaning_rms, 1, 'M2');
+xlswrite(outputWrite, Leaning_back_rms, 1, 'N2');
+xlswrite(outputWrite, Standing_rms, 1, 'O2');
+xlswrite(outputWrite, Sitting_rms, 1, 'P2');
+xlswrite(outputWrite, Ts, 1, 'Q2');
+
+saveas(h(1), string(strcat(output_dir, {'\'}, dataSetName, '_figure1.jpg')));
+saveas(h(2), string(strcat(output_dir, {'\'}, dataSetName, '_figure2.jpg')));
+saveas(h(3), string(strcat(output_dir, {'\'}, dataSetName, '_figure3.jpg')));
 
