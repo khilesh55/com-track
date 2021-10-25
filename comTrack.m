@@ -8,8 +8,8 @@ clc
 clearvars
 
 %Source and output directory
-source_dir = 'C:\Users\adond\OneDrive - York University\Research\U of A MATLAB\Test Data'; 
-output_dir = 'C:\Users\adond\OneDrive - York University\Research\U of A MATLAB\Test Output';
+source_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Data'; 
+output_dir = 'C:\Users\VR-7\Documents\MATLAB\Example Patient Output';
 source_files = dir(fullfile(source_dir, '*.xlsx'));
 fileIdx = 1; % Select which file to open
 
