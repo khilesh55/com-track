@@ -156,83 +156,6 @@ for i = 1:length(time)
     end
 end
 
-%% Signal Processing - Noise Removal
-
-% Variable declaration
-t = time;
-n = length(t); % Data length
-Fs = 1/(mean(diff(time))); % Sampling frequency
-Fn = Fs/2; % Nyquist frequency
-
-% Remove spikes/outliers
-D_threshold = 7; % Outlier filter intensity D: can be adjusted base on data sets
-H_threshold = 6; % Outlier filter intensity D: can be adjusted base on data sets
-D = filloutliers(paramDX,'clip','movmedian',D_threshold,'SamplePoints',t); 
-H = filloutliers(paramHX,'clip','movmedian',H_threshold,'SamplePoints',t);
-
-% Fourier Transform
-f = linspace(0,1,fix(n/2)+1)*Fn; % frequency vector
-i = 1:length(f); % Single-sided vector length
-fftD = fft(paramDX)/n; % fast forier transform D normalized by n
-fftH = fft(paramHX)/n; % fast forier transform H normalized by n
-D_mag = abs(fftD(i))*2; % Single-sided frequency domain of D
-H_mag = abs(fftH(i))*2; % Single-sided frequency domain of H
-
-% Low pass filter design
-wn_D = 0.1; % Cutoff frequency (rad/s) for D
-wn_H = 0.1; % Cutoff frequency (rad/s) for H
-order_D = 1; % Butterworth filter order: Intensity of filter
-order_H = 1; % Butterworth filter order: Internsity of filter
-[D1 D2] = butter(order_D, wn_D, 'low'); %Low pass filter for D with 1st order
-[H1 H2] = butter(order_H, wn_H, 'low'); %Low pass filter for H with 1st order
-
-% Filter implementation
-D_filtered = filter(D1,D2,D); % Apply filter to orginal signal D
-H_filtered = filter(H1,H2,H); % Apply filter to orginal signal H
-
-% Convert Filtered signal to Frequency domain
-fftDf = fft(D_filtered)/n; % fast forier transform filted D normalized by n
-fftHf = fft(H_filtered)/n; % fast forier transform filted H normalized by n
-Df_mag = abs(fftDf(i))*2; % Single-sided frequency domain of filtered D
-Hf_mag = abs(fftHf(i))*2; % Single-sided frequency domain of filtered H
-
-% Signal Zeroing
-LM_D = islocalmin(D_filtered,'MinSeparation',2,'SamplePoints',t); % Determine the lowest part of D
-LM_H = islocalmin(H_filtered,'MinSeparation',10,'SamplePoints',t); % Determine the lowest part of H
-base_D = median(D_filtered(LM_D)); % Create a lowest baseline for signal D
-base_H = median(H_filtered(LM_H)); % Create a lowest baseline for signal H
-new_D = D_filtered-base_D; % Normalize the signal D to zero position
-new_H = H_filtered-base_H; % Normalize the signal H to zero position
-
-% Gradient time Response
-gradient_D = gradient(new_D); % Gradient response for filtered and normalized signal D
-gradient_H = gradient(new_H); % Gradient response for filtered and normalized signal H
-
-% Gradient Peak Identification
-min_sep = 7; % Minimum seperation (seconds) corresponds to stand-to-sit cycling period 
-P_PeakD_index = find(islocalmax(gradient_D,'MinSeparation',min_sep,'SamplePoints',t)); % Positive Peaks D index
-N_PeakD_index = find(islocalmin(gradient_D,'MinSeparation',min_sep,'SamplePoints',t)); % Negative Peaks D index
-P_PeakH_index = find(islocalmax(gradient_H,'MinSeparation',min_sep,'SamplePoints',t)); % Positive Peaks H index
-N_PeakH_index = find(islocalmin(gradient_H,'MinSeparation',min_sep,'SamplePoints',t)); % Negative Peaks H index
-P_PeakD = gradient_D(P_PeakD_index); % Positive Peaks D
-N_PeakD = gradient_D(N_PeakD_index); % Negative Peaks D
-P_PeakH = gradient_H(P_PeakH_index); % Positive Peaks H
-N_PeakH = gradient_H(N_PeakH_index); % Negative Peaks H
-
-% Flat Region Identification
-FlatD_index = find(islocalmax(new_D,'FlatSelection','all','SamplePoints',t)); % Flat Regions Indices for D
-FlatH_index = find(islocalmax(new_H,'FlatSelection','all','SamplePoints',t)); % Flat Regions Indices For H
-FlatD = new_D(FlatD_index); % Flat Regions for Raw Signal D
-FlatH = new_H(FlatH_index); % Flat Regions for Raw Signal H
-P_FlatD = FlatD(FlatD>mean(FlatD)); % High Flat Regions for Raw Signal D
-N_FlatD = FlatD(FlatD<mean(FlatD)); % Low Flat Regions for Raw Signal D
-P_FlatH = FlatH(FlatH>mean(FlatH)); % High Flat Regions for Raw Signal H
-N_FlatH = FlatH(FlatH<mean(FlatH)); % Low Flat Regions for Raw Signal H
-t_P_FlatD = t(FlatD>mean(FlatD));
-t_N_FlatD = t(FlatD<mean(FlatD));
-t_P_FlatH = t(FlatH>mean(FlatH));
-t_N_FlatH = t(FlatH<mean(FlatH));
-
 %% Signal Processing - Output Parameters
 
 % An estimate of the lean speeds(Gradient of +D)
@@ -265,24 +188,31 @@ Standing_rms = rms(P_FlatH);
 Sitting_rms = rms(N_FlatH);
 
 % Cycling Period
-index = islocalmax(gradient_H,'MinSeparation',6,'SamplePoints',t);
-Ts = diff(t(index));
-
+Ts_D = diff(t(P_PeakD_index));
+Ts_H = diff(t(P_PeakH_index));
 
 %% Plot Results
 
 % Display original and filtered signal in time domain
 figure(1)
 subplot(2,1,1)
+hold on
 plot(t,paramDX,t,new_D,t_Lean_Speed,new_D(P_PeakD_index),'*r',t_Lean_Back_Speed,new_D(N_PeakD_index),'ob')
+plot(t(FlatD_index),FlatD,'.g')
+yline(base_D,'--k','Baseline');
+hold off
 ylim([-1 1]);
 title('D Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('D Position(m)') 
 legend({'Original','Filtered'},'Location','southeast')
 subplot(2,1,2)
+hold on
 plot(t,paramHX,t,new_H,t_Rise_Speed,new_H(P_PeakH_index),'*r',t_Sit_Speed,new_H(N_PeakH_index),'ob')
-ylim([-1 1]);
+plot(t(FlatH_index),FlatH,'.g')
+yline(base_H,'--k','Baseline');
+hold off
+ylim([-0.5 1.5]);
 title('H Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('H Position(m)') 
@@ -291,13 +221,19 @@ legend({'Original','Filtered'},'Location','southeast')
 % Display original and filtered signal in frequency domain
 figure(2)
 subplot(2,1,1)
+hold on
 plot(f,D_mag,f,Df_mag)
+xline(fc_D,'--k','Cut-off Frequency')
+hold off
 title('D Response - Single Sided Frequency')
 xlabel('Frequency(Hz)') 
 ylabel('D Magnitude(dB)') 
 legend({'Original','Filtered'},'Location','northeast')
 subplot(2,1,2)
+hold on
 plot(f,H_mag,f,Hf_mag)
+xline(fc_H,'--k','Cut-off Frequency')
+hold off
 title('H Response - Single Sided Frequency')
 xlabel('Frequency(Hz)') 
 ylabel('H Magnitude(dB)') 
@@ -308,11 +244,13 @@ figure(3)
 subplot(2,1,1)
 plot(t,gradient_D,t_Lean_Speed,Lean_Speed,'*r',t_Lean_Back_Speed,Lean_Back_Speed,'ob')
 ylim([-0.1 0.1]);
+title('D gradient Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('Gradient D(m/s)') 
 subplot(2,1,2)
 plot(t,gradient_H,t_Rise_Speed,Rise_Speed,'*r',t_Sit_Speed,Sit_Speed,'ob')
 ylim([-0.1 0.1]);
+title('H gradient Response - Time Domain')
 xlabel('Time(s)') 
 ylabel('Gradient H(m/s)') 
 
@@ -344,7 +282,8 @@ xlswrite(outputWrite, Leaning_rms, 1, 'M2');
 xlswrite(outputWrite, Leaning_back_rms, 1, 'N2');
 xlswrite(outputWrite, Standing_rms, 1, 'O2');
 xlswrite(outputWrite, Sitting_rms, 1, 'P2');
-xlswrite(outputWrite, Ts, 1, 'Q2');
+xlswrite(outputWrite, Ts_D, 1, 'Q2');
+xlswrite(outputWrite, Ts_H, 1, 'R2');
 
 saveas(h(1), string(strcat(output_dir, {'\'}, dataSetName, '_figure1.jpg')));
 saveas(h(2), string(strcat(output_dir, {'\'}, dataSetName, '_figure2.jpg')));
